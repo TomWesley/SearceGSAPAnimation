@@ -1,0 +1,223 @@
+/* styles.css */
+
+/* 1. RESET & GLOBAL */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+  
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    background: #001630;
+    font-family: Arial, sans-serif;
+    color: #fff;
+  }
+  
+  /* 2. HEADER */
+  
+  header {
+    position: relative;
+    z-index: 10;
+    height: 120px;
+    background: #001630;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    padding-left: 60px;
+  }
+  
+  header h1 {
+    font-size: clamp(1.8em, 4vw, 2.5em);
+    font-weight: 300;
+  }
+  
+  header p {
+    font-size: clamp(1em, 2vw, 1.1em);
+    opacity: 0.9;
+  }
+  .grid-wrapper {
+    position: relative;                     /* needed so children can switch to absolute */
+    display: grid;
+    grid-template-columns: repeat(4, auto); /* 4 columns */
+    grid-template-rows: repeat(2, auto);    /* 2 rows */
+    gap: 26px;                              /* adjust gap here (30% ↑ from 20px) */
+    justify-content: center;                /* center grid horizontally */
+    align-content: center;                  /* center grid vertically */
+    width: 100%;
+    height: calc(100vh - 120px);            /* entire viewport minus 120px header */
+    pointer-events: none;
+  }
+  
+  /* 2) Each card inside the grid (initial state) */
+  .card {
+    position: relative;       /* grid‐positioned by default */
+    width: 280px;             /* desktop base (will be overridden by JS scaling) */
+    height: 280px;            /* keep square aspect ratio (1:1) */
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.25);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    will-change: transform, opacity;
+  }
+  
+  /* 3) When we enter “stack mode,” we add this class on <div class="grid-wrapper"> */
+  .grid-wrapper.stack-mode .card {
+    /* Makes each card become positioned absolutely inside the same wrapper */
+    position: absolute;
+  }
+  
+  
+  /* 3. SCROLL INDICATOR */
+  
+  #scroll-indicator {
+    position: fixed;
+    top: 50%;
+    right: 20px;
+    transform: translateY(-50%);
+    width: 4px;
+    height: 200px;
+    background: rgba(255, 255, 255, 0.5);
+    border-radius: 2px;
+    z-index: 100;
+  }
+  
+  #scroll-progress {
+    width: 100%;
+    height: 0%;
+    background: #000;
+    border-radius: 2px;
+    transition: height 0.1s ease;
+  }
+  
+  /* 4. CARD GRID */
+  
+  /* The container spans the full viewport */
+  .card-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+  }
+  
+  /* Each card is absolutely positioned by GSAP */
+  .card {
+    position: absolute;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.25);
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+    will-change: transform, opacity;
+  }
+  
+  /* 5. SERVICE OVERLAY */
+  
+  /* Outer overlay under the header */
+  #service-overlay {
+    position: absolute;
+    top: 120px;                /* directly beneath the 120px‐tall header */
+    left: 50%;
+    width: 50%;
+    height: calc(100vh - 120px);
+    overflow: hidden;          /* hide off‐screen panels */
+    pointer-events: none;
+    z-index: 5;
+    background: transparent;
+    transform: translateX(-0%); /* keeps left:50% as the correct starting point */
+  }
+  
+  #service-overlay.active {
+    opacity: 1;
+    transition: opacity 0.2s ease;
+  }
+  
+  /* The tall stack of 8 service panels */
+  #services-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    /* height is determined by 8 × panel‐height (set inline in JS) */
+  }
+  
+  /* Each service “page” */
+  .service-content {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    color: #fff;
+    /* height is assigned inline in the component (canvasH = 100vh - 120px) */
+  }
+  
+  /* Title */
+  .service-content h2 {
+    font-size: clamp(1.8em, 4vw, 2.5em);
+    font-weight: 300;
+    margin-bottom: 20px;
+  }
+  
+  /* Description paragraph */
+  .service-content p {
+    font-size: clamp(1em, 1.8vw, 1.1em);
+    margin-bottom: 30px;
+    line-height: 1.8;
+    max-width: 90%;
+  }
+  
+  /* Feature list */
+  .service-content ul {
+    list-style: none;
+    padding: 0;
+    width: 80%;
+    max-width: 400px;
+  }
+  
+  .service-content li {
+    position: relative;
+    padding-left: 25px;
+    margin-bottom: 12px;
+    font-size: clamp(0.9em, 1.6vw, 1em);
+    text-align: left;
+  }
+  
+  .service-content li:before {
+    content: "✓";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+    font-size: 1.2em;
+  }
+  
+  /* 6. MEDIA QUERIES */
+  
+  @media (max-width: 768px) {
+    header {
+      padding-left: 30px;
+    }
+  
+    #scroll-indicator {
+      right: 10px;
+      height: 150px;
+    }
+  
+    /* On mobile, service overlay spans full width */
+    #service-overlay {
+      left: 0;
+      width: 100%;
+      transform: translateX(0);
+    }
+  }
+  
