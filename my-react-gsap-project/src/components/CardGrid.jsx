@@ -28,7 +28,7 @@ export default function CardGrid({ scrollPos, inStack }) {
   const cardRefs = useRef([]);
   const { width, height } = useWindowSize();
 
-  // Header is 120px tall, so content “canvas” is:
+  // Header is 120px tall, so content "canvas" is:
   const headerOffset = 120;
   const canvasH = height - headerOffset;
 
@@ -40,7 +40,7 @@ export default function CardGrid({ scrollPos, inStack }) {
     // Base sizes: 40% larger than original P5 bases.
     const baseSize = isMobile ? 224 : 280; // (160*1.4, 200*1.4)
     const baseScale = Math.max(0.5, Math.min(1.2, width / 1200));
-    const cardSize = baseSize * baseScale;
+    const cardSize = baseScale * baseSize;
 
     // Increase gap by 30%: original small gaps were 15 (mobile) / 20 (desktop).
     const rawGap = isMobile ? 15 : 20;
@@ -59,8 +59,9 @@ export default function CardGrid({ scrollPos, inStack }) {
       for (let i = 0; i < 8; i++) {
         const row = Math.floor(i / 2);
         const col = i % 2;
-        const x = startX + col * (cardSize + gap);
-        const y = startY + row * (cardSize + gap);
+        // Calculate center points of each card
+        const x = startX + col * (cardSize + gap) + cardSize / 2;
+        const y = startY + row * (cardSize + gap) + cardSize / 2;
         coords.push({ x, y, size: cardSize });
       }
     } else {
@@ -74,8 +75,9 @@ export default function CardGrid({ scrollPos, inStack }) {
       for (let i = 0; i < 8; i++) {
         const row = Math.floor(i / 4);
         const col = i % 4;
-        const x = startX + col * (cardSize + gap);
-        const y = startY + row * (cardSize + gap);
+        // Calculate center points of each card
+        const x = startX + col * (cardSize + gap) + cardSize / 2;
+        const y = startY + row * (cardSize + gap) + cardSize / 2;
         coords.push({ x, y, size: cardSize });
       }
     }
@@ -115,16 +117,16 @@ export default function CardGrid({ scrollPos, inStack }) {
       // Collapse all cards onto (centerX, centerY) at 40% larger than grid size
       cardRefs.current.forEach((el, idx) => {
         if (!el) return;
-        const delay = idx * 0.06;
+        const delay = idx * 0.08; // Slightly slower stagger
         tl.to(
           el,
           {
-            x: centerX - coords[idx].size / 2,
-            y: centerY - coords[idx].size / 2,
+            x: centerX - (coords[idx].size * 1.4) / 2,
+            y: centerY - (coords[idx].size * 1.4) / 2,
             width: coords[idx].size * 1.4,
             height: coords[idx].size * 1.4,
             rotation: 0, // no tilt
-            duration: 1,
+            duration: 1.5, // Slower animation
             ease: Power3.easeInOut,
             delay,
           },
@@ -135,7 +137,7 @@ export default function CardGrid({ scrollPos, inStack }) {
       // Return all cards to their grid coords (rotation=0). Stagger reverse order.
       cardRefs.current.forEach((el, idx) => {
         if (!el) return;
-        const revDelay = (7 - idx) * 0.04;
+        const revDelay = (7 - idx) * 0.06; // Slightly slower reverse stagger
         tl.to(
           el,
           {
@@ -144,7 +146,7 @@ export default function CardGrid({ scrollPos, inStack }) {
             width: coords[idx].size,
             height: coords[idx].size,
             rotation: 0,
-            duration: 1,
+            duration: 1.5, // Slower animation
             ease: Power3.easeInOut,
             delay: revDelay,
           },
@@ -156,16 +158,22 @@ export default function CardGrid({ scrollPos, inStack }) {
     return () => tl.kill();
   }, [inStack, width, height]);
 
-  // While stacked, show only the “active” card; hide all others
+  // While stacked, show only the "active" card; hide all others
   useEffect(() => {
     if (!inStack) {
-      // Back to grid: all cards opaque
+      // Back to grid: clear any running animations and make all cards visible immediately
       cardRefs.current.forEach((el) => {
         if (!el) return;
-        gsap.to(el, { opacity: 1, duration: 0.2 });
+        // Kill any running opacity/zIndex animations first
+        gsap.killTweensOf(el, "opacity,zIndex");
+        // Then immediately set all cards visible
+        gsap.set(el, { opacity: 1, zIndex: 1 });
       });
       return;
     }
+
+    // When entering stack mode, delay the opacity changes so the collapse animation can be seen
+    const delayBeforeHiding = 1.2; // Increased delay to match slower animation
 
     // scrollPos ∈ [1..8] → raw ∈ [0..7]; clamp to 0..7
     let raw = scrollPos - 1;
@@ -175,9 +183,9 @@ export default function CardGrid({ scrollPos, inStack }) {
     cardRefs.current.forEach((el, idx) => {
       if (!el) return;
       if (idx === activeIdx) {
-        gsap.to(el, { opacity: 1, zIndex: 100, duration: 0.2 });
+        gsap.to(el, { opacity: 1, zIndex: 100, duration: 0.3, delay: delayBeforeHiding });
       } else {
-        gsap.to(el, { opacity: 0, zIndex: 0, duration: 0.2 });
+        gsap.to(el, { opacity: 0, zIndex: 0, duration: 0.3, delay: delayBeforeHiding });
       }
     });
   }, [scrollPos, inStack]);
