@@ -27,6 +27,7 @@ const cardImages = [
 export default function CardGrid({ scrollPos, inStack }) {
   const cardRefs = useRef([]);
   const { width, height } = useWindowSize();
+  const animatingRef = useRef(false); // Track if we're in transition animation
 
   // Header is 120px tall, so content "canvas" is:
   const headerOffset = 120;
@@ -108,16 +109,18 @@ export default function CardGrid({ scrollPos, inStack }) {
     });
   }, [width, height]);
 
-  // Animate cards into/out of the stack
+  // MAIN ANIMATION EFFECT - This is the only effect that matters during transitions
   useEffect(() => {
     const { coords, centerX, centerY } = computeGridCoords();
     const tl = gsap.timeline();
 
     if (inStack) {
-      // Collapse all cards onto (centerX, centerY) at 40% larger than grid size
+      // GRID TO SINGLE - Perfect mirror of working single-to-grid animation
+      animatingRef.current = true; // Block all other effects
+      
       cardRefs.current.forEach((el, idx) => {
         if (!el) return;
-        const delay = idx * 0.08; // Slightly slower stagger
+        const delay = idx * 0.06; // FORWARD stagger (0, 0.06, 0.12, etc.)
         tl.to(
           el,
           {
@@ -125,19 +128,23 @@ export default function CardGrid({ scrollPos, inStack }) {
             y: centerY - (coords[idx].size * 1.4) / 2,
             width: coords[idx].size * 1.4,
             height: coords[idx].size * 1.4,
-            rotation: 0, // no tilt
-            duration: 1.5, // Slower animation
-            ease: Power3.easeInOut,
+            rotation: 0,
+            opacity: 1,
+            duration: 1.5, // EXACT same duration
+            ease: Power3.easeInOut, // EXACT same easing
             delay,
+            onComplete: idx === 7 ? () => { animatingRef.current = false; } : null // Last card completes
           },
           0
         );
       });
     } else {
-      // Return all cards to their grid coords (rotation=0). Stagger reverse order.
+      // SINGLE TO GRID - The working animation (unchanged)
+      animatingRef.current = true; // Block all other effects
+      
       cardRefs.current.forEach((el, idx) => {
         if (!el) return;
-        const revDelay = (7 - idx) * 0.06; // Slightly slower reverse stagger
+        const revDelay = (7 - idx) * 0.06; // REVERSE stagger
         tl.to(
           el,
           {
@@ -146,9 +153,11 @@ export default function CardGrid({ scrollPos, inStack }) {
             width: coords[idx].size,
             height: coords[idx].size,
             rotation: 0,
-            duration: 1.5, // Slower animation
-            ease: Power3.easeInOut,
+            opacity: 1,
+            duration: 1.5, // EXACT same duration
+            ease: Power3.easeInOut, // EXACT same easing
             delay: revDelay,
+            onComplete: idx === 0 ? () => { animatingRef.current = false; } : null // Last card completes
           },
           0
         );
@@ -158,37 +167,50 @@ export default function CardGrid({ scrollPos, inStack }) {
     return () => tl.kill();
   }, [inStack, width, height]);
 
-  // While stacked, show only the "active" card; hide all others
+  // Card switching and stacking - ONLY runs when NOT animating
   useEffect(() => {
-    if (!inStack) {
-      // Back to grid: clear any running animations and make all cards visible immediately
-      cardRefs.current.forEach((el) => {
-        if (!el) return;
-        // Kill any running opacity/zIndex animations first
-        gsap.killTweensOf(el, "opacity,zIndex");
-        // Then immediately set all cards visible
-        gsap.set(el, { opacity: 1, zIndex: 1 });
-      });
-      return;
-    }
-
-    // When entering stack mode, delay the opacity changes so the collapse animation can be seen
-    const delayBeforeHiding = 1.2; // Increased delay to match slower animation
+    if (!inStack || animatingRef.current) return; // BLOCKED during transitions
 
     // scrollPos ∈ [1..8] → raw ∈ [0..7]; clamp to 0..7
     let raw = scrollPos - 1;
     raw = Math.max(0, Math.min(7, raw));
     const activeIdx = Math.floor(raw);
 
+    const { coords, centerX, centerY } = computeGridCoords();
+    const stackOffsetY = 15;
+    const stackOffsetX = 0;
+    const scaleReduction = 0.05;
+
     cardRefs.current.forEach((el, idx) => {
       if (!el) return;
-      if (idx === activeIdx) {
-        gsap.to(el, { opacity: 1, zIndex: 100, duration: 0.3, delay: delayBeforeHiding });
+
+      if (idx <= activeIdx) {
+        // Current and previous cards: visible with stack effect
+        const stackPosition = activeIdx - idx;
+        const yOffset = stackPosition * stackOffsetY;
+        const xOffset = stackPosition * stackOffsetX;
+        const scale = 1 - (stackPosition * scaleReduction);
+        const scaledSize = coords[idx].size * 1.4 * scale;
+
+        gsap.to(el, {
+          x: centerX - scaledSize / 2 + xOffset,
+          y: centerY - scaledSize / 2 - yOffset,
+          width: scaledSize,
+          height: scaledSize,
+          opacity: 1,
+          zIndex: 100 - stackPosition,
+          duration: 0.2
+        });
       } else {
-        gsap.to(el, { opacity: 0, zIndex: 0, duration: 0.3, delay: delayBeforeHiding });
+        // Future cards: hidden
+        gsap.to(el, {
+          opacity: 0,
+          zIndex: 0,
+          duration: 0.2
+        });
       }
     });
-  }, [scrollPos, inStack]);
+  }, [scrollPos, inStack, width, height]);
 
   return (
     <div className="card-container">

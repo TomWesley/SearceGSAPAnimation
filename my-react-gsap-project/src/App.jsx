@@ -66,7 +66,7 @@ export default function App() {
 
   // Whenever scrollPos crosses thresholds, toggle inStack and animate overlay
   useEffect(() => {
-    if (scrollPos >= 0.9 && !inStack) {
+    if (scrollPos >= 0.1 && !inStack) {
       // Enter stack
       setInStack(true);
     } else if (scrollPos <= 0.1 && inStack) {
